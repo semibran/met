@@ -19,7 +19,7 @@ body {
 #app::before {
   content: '';
   display: block;
-  padding: 75% 0 0;
+  padding: 87.5% 0 0;
 }
 
 canvas {
@@ -37,9 +37,9 @@ canvas {
   -ms-interpolation-mode: nearest-neighbor;
 }
 
-@media (min-aspect-ratio: 4 / 3) {
+@media (min-aspect-ratio: 8 / 7) {
   #app {
-    width: calc(100vh * 4 / 3);
+    width: calc(100vh * 8 / 7);
     height: 100vh;
   }
 }

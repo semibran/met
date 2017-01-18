@@ -389,8 +389,9 @@ var sprites = {
   tiles: {
     sprites: ['bush_l', 'bush_m', 'bush_r', 'hill_slope_l', 'hill_slope_r', 'hill_top', 'pipe_top_l', 'pipe_top_r', 'stone', 'cloud_ul', 'cloud_u', 'cloud_ur', 'hill_spots_a', 'hill_spots_b', 'hill', 'pipe_l', 'pipe_r', 'block', 'cloud_dl', 'cloud_d', 'cloud_dr', 'sky', 'question0', 'question1', 'question2', 'questionX', 'brick']
   },
+  menu: { sprites: ['cell', 'edge'], sizes: 8 },
   text: {
-    sprites: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ!-<>',
+    sprites: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.,!?-\'"()<>',
     sizes: 8
   }
 };
@@ -411,45 +412,212 @@ function setup(images) {
     if (options) spritesheets[name] = Spritesheet.make(image, options);else sprites[name] = image;
   });
 
-  var canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 224;
+  var display = createContext(256, 224);
 
-  var context = canvas.getContext('2d');
-  context.drawImage(sprites.select, 0, 0);
+  var editor = createContext(display.canvas.width, display.canvas.height);
+  editor.drawImage(sprites.select, 0, 0);
 
-  var greeting = renderText(spritesheets.text, 'Hello world!');
-  context.drawImage(greeting, canvas.width / 2 - greeting.width / 2, canvas.height / 2 - greeting.height / 2);
+  display.drawImage(editor.canvas, 0, 0);
 
-  document.querySelector('#app').appendChild(canvas);
+  var menu = createMenu(spritesheets.menu, 32, 8);
+
+  var _spritesheets$menu$si = slicedToArray(spritesheets.menu.sizes, 2),
+      spriteWidth = _spritesheets$menu$si[0],
+      spriteHeight = _spritesheets$menu$si[1];
+
+  var menuWidth = menu.cols * spriteWidth;
+  var menuHeight = menu.rows * spriteHeight;
+  window.addEventListener('keydown', function (event) {
+    if (event.code === 'Space') {
+      var _ret = function () {
+        var step = function step() {
+          display.drawImage(drawMenu(menu, index++), 0, display.canvas.height - menuHeight);
+          if (index < menu.cols * menu.rows / 16) window.requestAnimationFrame(step);else {
+            menu.drawing = false;
+
+            var context = menu.context,
+                _menu$spritesheet$siz = slicedToArray(menu.spritesheet.sizes, 2),
+                _spriteWidth = _menu$spritesheet$siz[0],
+                _spriteHeight = _menu$spritesheet$siz[1],
+                cols = menu.cols,
+                rows = menu.rows;
+
+            var _spritesheets$tiles = spritesheets.tiles,
+                tiles = _spritesheets$tiles.list,
+                _spritesheets$tiles$s = slicedToArray(_spritesheets$tiles.sizes, 2),
+                tileWidth = _spritesheets$tiles$s[0],
+                tileHeight = _spritesheets$tiles$s[1];
+
+            for (var i = 12, sprite; sprite = tiles[--i];) {
+              context.drawImage(sprite, i * tileWidth + 32, 24);
+            }context.drawImage(spritesheets.text.sprites['<'], 12, 28);
+            context.drawImage(spritesheets.text.sprites['>'], _spriteWidth * cols - 12 - 8, 28);
+            display.drawImage(context.canvas, 0, display.canvas.height - _spriteHeight * menu.rows);
+          }
+        };
+
+        if (menu.visible || menu.drawing) return {
+            v: void 0
+          };
+        menu.visible = true;
+        menu.drawing = true;
+        var index = 0;
+
+        step();
+      }();
+
+      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+    }
+  });
+
+  window.addEventListener('keyup', function (event) {
+    if (event.code === 'Space') {
+      var _ret2 = function () {
+        var step = function step() {
+          display.drawImage(editor.canvas, 0, 0);
+          display.drawImage(eraseMenu(menu, index++), 0, display.canvas.height - menuHeight);
+          if (index < menu.cols * menu.rows / 16) window.requestAnimationFrame(step);else menu.drawing = false;
+        };
+
+        if (!menu.visible || menu.drawing) return {
+            v: void 0
+          };
+        menu.visible = false;
+        menu.drawing = true;
+        display.drawImage(clearMenu(menu), 0, display.canvas.height - menuHeight);
+        var index = 0;
+
+        step();
+      }();
+
+      if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+    }
+  });
+
+  document.querySelector('#app').appendChild(display.canvas);
 }
 
-function renderText(spritesheet, text) {
-
-  var sprites = spritesheet.sprites;
-
-  var _spritesheet$sizes = slicedToArray(spritesheet.sizes, 2),
-      spriteWidth = _spritesheet$sizes[0],
-      spriteHeight = _spritesheet$sizes[1];
-
-  var width = spriteWidth * text.length;
-  var height = spriteHeight;
-
+function createContext(width, height) {
   var canvas = document.createElement('canvas');
+  var context = canvas.getContext('2d');
   canvas.width = width;
   canvas.height = height;
+  return context;
+}
 
-  var context = canvas.getContext('2d');
+function createMenu(spritesheet, cols, rows) {
+  var _spritesheet$sizes2 = slicedToArray(spritesheet.sizes, 2),
+      spriteWidth = _spritesheet$sizes2[0],
+      spriteHeight = _spritesheet$sizes2[1];
 
-  var i = text.length;
-  while (i--) {
-    var char = text[i];
-    var sprite = sprites[char] || sprites[char.toUpperCase()] || sprites[char.toLowerCase()];
-    if (!sprite) continue;
-    context.drawImage(sprite, i * spriteWidth, 0, spriteWidth, spriteHeight);
+  var context = createContext(cols * spriteWidth, rows * spriteHeight);
+  return { context: context, spritesheet: spritesheet, cols: cols, rows: rows, drawing: false, visible: false };
+}
+
+function drawMenu(menu, index) {
+  var context = menu.context,
+      spritesheet = menu.spritesheet,
+      cols = menu.cols,
+      rows = menu.rows;
+
+  var _spritesheet$sizes3 = slicedToArray(spritesheet.sizes, 2),
+      spriteWidth = _spritesheet$sizes3[0],
+      spriteHeight = _spritesheet$sizes3[1];
+
+  var _spritesheet$list = slicedToArray(spritesheet.list, 2),
+      CELL = _spritesheet$list[0],
+      EDGE = _spritesheet$list[1];
+
+  if (isNaN(index)) {
+    for (var i = cols * rows; i--;) {
+      var _fromIndex = fromIndex(i, cols),
+          _fromIndex2 = slicedToArray(_fromIndex, 2),
+          x = _fromIndex2[0],
+          y = _fromIndex2[1];
+
+      var sprite = CELL;
+      if (!y || y === rows - 1) sprite = EDGE;
+      context.drawImage(sprite, x * spriteWidth, y * spriteHeight);
+    }
+  } else {
+    var _fromIndex$map = fromIndex(index, cols / 4).map(function (x) {
+      return x * 4;
+    }),
+        _fromIndex$map2 = slicedToArray(_fromIndex$map, 2),
+        curX = _fromIndex$map2[0],
+        curY = _fromIndex$map2[1];
+
+    for (var _i = 0; _i < 16; _i++) {
+      var _fromIndex3 = fromIndex(_i, 4),
+          _fromIndex4 = slicedToArray(_fromIndex3, 2),
+          offX = _fromIndex4[0],
+          offY = _fromIndex4[1];
+
+      var x = curX + offX;
+      var y = curY + offY;
+      var _sprite = CELL;
+      if (!y || y === rows - 1) _sprite = EDGE;
+      context.drawImage(_sprite, x * spriteWidth, y * spriteHeight);
+    }
   }
 
-  return canvas;
+  return context.canvas;
+}
+
+function eraseMenu(menu, index) {
+  var context = menu.context,
+      spritesheet = menu.spritesheet,
+      cols = menu.cols,
+      rows = menu.rows;
+
+
+  var SIZE = 8 * 4;
+
+  var _spritesheet$list2 = slicedToArray(spritesheet.list, 2),
+      CELL = _spritesheet$list2[0],
+      EDGE = _spritesheet$list2[1];
+
+  if (isNaN(index)) context.clearRect(0, 0, cols * SIZE, rows * SIZE);else {
+    var _fromIndex5 = fromIndex(index, cols / 4),
+        _fromIndex6 = slicedToArray(_fromIndex5, 2),
+        curX = _fromIndex6[0],
+        curY = _fromIndex6[1];
+
+    context.clearRect(curX * SIZE, curY * SIZE, SIZE, SIZE);
+  }
+
+  return context.canvas;
+}
+
+function clearMenu(menu) {
+  var context = menu.context,
+      spritesheet = menu.spritesheet,
+      cols = menu.cols,
+      rows = menu.rows;
+
+  var _spritesheet$sizes4 = slicedToArray(spritesheet.sizes, 2),
+      spriteWidth = _spritesheet$sizes4[0],
+      spriteHeight = _spritesheet$sizes4[1];
+
+  var _spritesheet$list3 = slicedToArray(spritesheet.list, 1),
+      CELL = _spritesheet$list3[0];
+
+  for (var i = cols * (rows - 2); i--;) {
+    var _fromIndex7 = fromIndex(i, cols),
+        _fromIndex8 = slicedToArray(_fromIndex7, 2),
+        x = _fromIndex8[0],
+        y = _fromIndex8[1];
+
+    y++;
+    context.drawImage(CELL, x * spriteWidth, y * spriteHeight);
+  }
+  return context.canvas;
+}
+
+function fromIndex(index, cols) {
+  var x = index % cols;
+  var y = (index - x) / cols;
+  return [x, y];
 }
 
 })));
